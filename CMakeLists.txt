@@ -90,6 +90,12 @@ if(CMAKE_COMPILER_IS_GNUCC)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffp-contract=fast -mavx -mavx2 -msse3 -msse4.1 -msse4.2 -msse4a")
 endif()
 
+if(APPLE)
+  add_definitions(-D__AVX__=1)
+  set(ENABLE_AVX2 ON)
+  set(CMAKE_CXX_FLAGS "-mavx2 ${CMAKE_CXX_FLAGS}")
+endif()
+
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "-Wno-deprecated -Wno-writable-strings ${CMAKE_CXX_FLAGS}")
   string(REGEX REPLACE "-O0" "-Og" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})

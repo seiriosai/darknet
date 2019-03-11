@@ -1117,11 +1117,41 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
 // http://graphics.stanford.edu/~seander/bithacks.html
 // https://stackoverflow.com/questions/17354971/fast-counting-the-number-of-set-bits-in-m128i-register
 // https://arxiv.org/pdf/1611.07612.pdf
+#if __APPLE__
+static const __m128i popcount_mask1 = _mm_set1_epi8(0x77);
+static const __m128i popcount_mask2 = _mm_set1_epi8(0x0F);
+static inline __m128i popcnt8(__m128i x) {
+    __m128i n;
+    // Count bits in each 4-bit field.
+    n = _mm_srli_epi64(x, 1);
+    n = _mm_and_si128(popcount_mask1, n);
+    x = _mm_sub_epi8(x, n);
+    n = _mm_srli_epi64(n, 1);
+    n = _mm_and_si128(popcount_mask1, n);
+    x = _mm_sub_epi8(x, n);
+    n = _mm_srli_epi64(n, 1);
+    n = _mm_and_si128(popcount_mask1, n);
+    x = _mm_sub_epi8(x, n);
+    x = _mm_add_epi8(x, _mm_srli_epi16(x, 4));
+    x = _mm_and_si128(popcount_mask2, x);
+    return x;
+}
+
+static inline __m128i popcnt64(__m128i n) {
+    const __m128i cnt8 = popcnt8(n);
+    return _mm_sad_epu8(cnt8, _mm_setzero_si128());
+}
+#endif
 
 static inline int popcnt128(__m128i n) {
     const __m128i n_hi = _mm_unpackhi_epi64(n, n);
 #ifdef _MSC_VER
     return __popcnt64(_mm_cvtsi128_si64(n)) + __popcnt64(_mm_cvtsi128_si64(n_hi));
+#elif __APPLE__
+    const __m128i cnt64 = popcnt64(n);
+    const __m128i cnt64_hi = _mm_unpackhi_epi64(cnt64, cnt64);
+    const __m128i cnt128 = _mm_add_epi32(cnt64, cnt64_hi);
+    return _mm_cvtsi128_si32(cnt128);
 #else
     return __popcntq(_mm_cvtsi128_si64(n)) + __popcntq(_mm_cvtsi128_si64(n_hi));
 #endif
