@@ -13,6 +13,10 @@
 #endif
 #if defined(_OPENMP)
 #include <omp.h>
+#else
+#include "threadpool.hpp"
+static astp::ThreadPool cnn_tp_(4);
+#define USE_THREAD_POOL
 #endif
 
 #define TILE_M 4 // 4 ops
@@ -754,6 +758,9 @@ void gemm_nn_fast(int M, int N, int K, float ALPHA,
     #pragma omp parallel for
     for (i = 0; i < (M / TILE_M)*TILE_M; i += TILE_M)
     {
+#if defined(USE_THREAD_POOL)
+        cnn_tp_.push([N, K, ALPHA, A, lda, B, ldb, C, ldc, i]() {
+#endif
         int j, k;
         int i_d, j_d, k_d;
 
@@ -865,7 +872,13 @@ void gemm_nn_fast(int M, int N, int K, float ALPHA,
                 }
             }
         }
+#if defined(USE_THREAD_POOL)
+        });
+#endif
     }
+#if defined(USE_THREAD_POOL)
+    cnn_tp_.wait();
+#endif
 
     for (i = (M / TILE_M)*TILE_M; i < M; ++i) {
         int j, k;
@@ -1009,24 +1022,13 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
         //*((__m256*)&input[i]) = _mm256_and_ps(*((__m256*)&input[i]), _mm256_castsi256_ps(all256_sing1));
     //}
 
-
-    //__m256i all256_last_zero = _mm256_set1_epi32(0xFFFFFFFF);
-    //all256_last_zero.m256i_i32[7] = 0;
-    __m256i all256_last_zero =
-        _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x0);
-
-    __m256i idx256 = _mm256_set_epi32(0, 7, 6, 5, 4, 3, 2, 1);
-    //__m256 all256_sing1 = _mm256_set1_ps(0x80000000);
-    __m256 all256_one = _mm256_set1_ps(1);
-    __m256i all256i_one = _mm256_set1_epi32(1);
-
-    ///__m256i src256 = _mm256_loadu_si256((__m256i *)(&src[i]));
-    ///__m256i result256 = _mm256_and_si256(src256, all256_sing1); // check sign in 8 x 32-bit floats
-
     int fil;
     // filter index
     #pragma omp parallel for      // "omp parallel for" - automatic parallelization of loop by using OpenMP
     for (fil = 0; fil < n; ++fil) {
+#if defined(USE_THREAD_POOL)
+        cnn_tp_.push([mean, fil, h, w, ksize, pad, c, input, weights, output]() {
+#endif
         int chan, y, x, f_y, f_x;
         float cur_mean = fabs(mean[fil]);
         __m256 mean256 = _mm256_set1_ps(cur_mean);
@@ -1038,7 +1040,6 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
                 for (x = 0; x < w-8; x+=8)
                 {
                     int const output_index = fil*w*h + y*w + x;
-                    float sum = 0;
                     __m256 sum256 = _mm256_set1_ps(0);
 
                     for (chan = 0; chan < c; ++chan) {
@@ -1104,10 +1105,14 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
 
                     //_mm256_storeu_ps(&C[i*ldc + j], result256);
                 }
+#if defined(USE_THREAD_POOL)
+        });
+#endif
     }
+#if defined(USE_THREAD_POOL)
+    cnn_tp_.wait();
+#endif
 }
-
-
 
 // http://graphics.stanford.edu/~seander/bithacks.html
 // https://stackoverflow.com/questions/17354971/fast-counting-the-number-of-set-bits-in-m128i-register
