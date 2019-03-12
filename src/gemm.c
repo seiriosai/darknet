@@ -943,9 +943,6 @@ void gemm_nn_bin_32bit_packed(int M, int N, int K, float ALPHA,
 void convolution_2d_old(int w, int h, int ksize, int n, int c, int pad, int stride,
     float *weights, float *input, float *output)
 {
-    const int out_h = (h + 2 * pad - ksize) / stride + 1;    // output_height=input_height for stride=1 and pad=1
-    const int out_w = (w + 2 * pad - ksize) / stride + 1;    // output_width=input_width for stride=1 and pad=1
-
     int fil;
     // filter index
     #pragma omp parallel for      // "omp parallel for" - automatic parallelization of loop by using OpenMP
@@ -991,8 +988,6 @@ void convolution_2d_old(int w, int h, int ksize, int n, int c, int pad, int stri
 void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
     float *weights, float *input, float *output, float *mean)
 {
-    const int out_h = (h + 2 * pad - ksize) / stride + 1;    // output_height=input_height for stride=1 and pad=1
-    const int out_w = (w + 2 * pad - ksize) / stride + 1;    // output_width=input_width for stride=1 and pad=1
     int i;
 
 #if defined(_OPENMP)

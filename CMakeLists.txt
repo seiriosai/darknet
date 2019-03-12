@@ -246,7 +246,9 @@ endif()
 add_executable(uselib ${CMAKE_CURRENT_LIST_DIR}/src/yolo_console_dll.cpp)
 set_target_properties(uselib PROPERTIES LINKER_LANGUAGE CXX)
 
-add_executable(darknet ${CMAKE_CURRENT_LIST_DIR}/src/darknet.c ${sources} ${headers} ${cuda_sources})
+add_executable(darknet ${CMAKE_CURRENT_LIST_DIR}/src/darknet.c)
+add_dependencies(darknet darklib)
+target_link_libraries(darknet darklib)
 set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/src/darknet.c PROPERTIES LANGUAGE CXX)
 set_target_properties(darknet PROPERTIES LINKER_LANGUAGE CXX)
 
