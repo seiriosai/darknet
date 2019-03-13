@@ -18,6 +18,7 @@
 #endif
 
 #define C_SHARP_MAX_OBJECTS 1000
+#define YOLO_MIN(a,b) ((a) < (b)) ? (a) : (b)
 
 struct bbox_t {
     unsigned int x, y, w, h;       // (x,y) - top-left corner, (w, h) - width & height of bounded box
@@ -504,7 +505,7 @@ public:
 
         // increment frames history
         for (auto &i : preview_box_track_id)
-            i.last_showed_frames_ago = std::min((unsigned)frames_history, i.last_showed_frames_ago + 1);
+            i.last_showed_frames_ago = YOLO_MIN((unsigned)frames_history, i.last_showed_frames_ago + 1);
 
         // occupy empty boxes
         for (auto &k : result_vec) {
