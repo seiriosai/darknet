@@ -15,7 +15,7 @@
 #include <omp.h>
 #else
 #include "threadpool.hpp"
-static astp::ThreadPool cnn_tp_(4);
+static astp::ThreadPool cnn_tp_(3);
 #define USE_THREAD_POOL
 #endif
 
@@ -1007,7 +1007,7 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
     static int max_num_threads = 0;
     if (max_num_threads == 0) {
         max_num_threads = omp_get_max_threads();
-        //omp_set_num_threads( max_num_threads / 2);
+        omp_set_num_threads(max_num_threads - 1);
     }
 #endif
 
@@ -1221,7 +1221,7 @@ void gemm_nn_custom_bin_mean_transposed(int M, int N, int K, float ALPHA_UNUSED,
     static int max_num_threads = 0;
     if (max_num_threads == 0) {
         max_num_threads = omp_get_max_threads();
-        //omp_set_num_threads(max_num_threads / 2);
+        omp_set_num_threads(max_num_threads - 1);
     }
 #endif
 
